@@ -1,1 +1,4 @@
-<resources><string name="app_name">CallNote</string></resources>
+<resources>
+    <string name="app_name">CallNote</string>
+    <string name="a11y_description">Lets CallNote keep microphone access while a call is active. It does not read your screen.</string>
+</resources>

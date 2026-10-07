@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.provider.Settings
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -38,6 +39,16 @@ class MainActivity : Activity() {
             text = "Grant permissions"
             setOnClickListener { requestPermissions(perms, 1) }
         }
+        val a11y = Button(this).apply {
+            text = "Enable call audio (Accessibility)"
+            setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+        }
+        val appInfo = Button(this).apply {
+            text = "App info (allow restricted settings)"
+            setOnClickListener {
+                startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
+            }
+        }
         val spinner = Spinner(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, sources)
             val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -56,7 +67,7 @@ class MainActivity : Activity() {
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             startActivity(Intent.createChooser(send, "Send recording"))
         }
-        root.addView(status); root.addView(grant)
+        root.addView(status); root.addView(grant); root.addView(a11y); root.addView(appInfo)
         root.addView(TextView(this).apply { text = "Audio source (try another if a recording is silent):" })
         root.addView(spinner)
         root.addView(TextView(this).apply { text = "Recordings (tap to share):" })
@@ -67,8 +78,13 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         val missing = perms.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
-        status.text = if (missing.isEmpty()) "Ready. You'll be asked when a call comes in."
-        else "Missing permissions: " + missing.joinToString { it.substringAfterLast('.') }
+        val a11yOn = (Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: "")
+            .contains("$packageName/")
+        status.text = when {
+            missing.isNotEmpty() -> "Missing permissions: " + missing.joinToString { it.substringAfterLast('.') }
+            !a11yOn -> "Accessibility service is OFF: recordings will be silent during calls. Enable \"CallNote call audio\"."
+            else -> "Ready. You'll be asked when a call comes in."
+        }
         loadRecordings()
     }
 
